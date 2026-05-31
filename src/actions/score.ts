@@ -7,7 +7,6 @@ import { prisma } from "@/lib/prisma";
 import {
   normalizePlayerName,
   PLAYER_NAME_MAX,
-  PLAYER_NAME_MIN,
   validatePlayerName,
 } from "@/lib/player";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
@@ -309,7 +308,7 @@ export async function saveGameScore(
     const guestName = normalizePlayerName(parsed.guestName ?? "");
     const nameError = validatePlayerName(guestName);
     if (nameError) {
-      return { success: false, reason: "INVALID_NAME" };
+      return { success: false, reason: "INVALID_NAME", message: nameError };
     }
 
     if (parsed.mode === "survival") {

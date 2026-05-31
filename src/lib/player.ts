@@ -1,6 +1,11 @@
+import {
+  BANNED_PLAYER_NAME_MESSAGE,
+  containsBannedPlayerName,
+} from "@/lib/player-banned-words";
+
 export const PLAYER_NAME_STORAGE_KEY = "dot-click-player-name";
 
-export const PLAYER_NAME_MIN = 2;
+export const PLAYER_NAME_MIN = 1;
 export const PLAYER_NAME_MAX = 16;
 
 export function normalizePlayerName(value: string): string {
@@ -14,6 +19,9 @@ export function validatePlayerName(value: string): string | null {
   }
   if (name.length > PLAYER_NAME_MAX) {
     return `名前は${PLAYER_NAME_MAX}文字以内で入力してください`;
+  }
+  if (containsBannedPlayerName(name)) {
+    return BANNED_PLAYER_NAME_MESSAGE;
   }
   return null;
 }
