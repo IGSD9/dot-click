@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getLeaderboard } from "@/actions/score";
 import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
 import { SiteHeader } from "@/components/ui/SiteHeader";
+import { getDatabaseConfigErrorMessage } from "@/lib/database";
 import { parseGameMode } from "@/lib/game/modes";
 
 export const dynamic = "force-dynamic";
@@ -17,12 +18,11 @@ export default async function LeaderboardPage({
   const mode = parseGameMode(modeParam);
   const { entries, dbError } = await getLeaderboard(mode);
   const emptyMessage = dbError
-    ? `ランキングの取得に失敗しました: ${dbError}`
-    : process.env.DATABASE_URL
-      ? mode === "survival"
+    ? dbError
+    : getDatabaseConfigErrorMessage() ??
+      (mode === "survival"
         ? "まだサバイバルのスコアがありません。ゲームをプレイして記録を残しましょう。"
-        : "まだ20点スピードの記録がありません。ゲームをプレイして記録を残しましょう。"
-      : "DATABASE_URL が未設定です。Vercel の Environment Variables を確認してください。";
+        : "まだ20点スピードの記録がありません。ゲームをプレイして記録を残しましょう。");
 
   return (
     <div className="flex min-h-[100dvh] flex-col">

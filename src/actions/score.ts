@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { upsertUserFromAuth } from "@/actions/user";
+import { getDatabaseConfigErrorMessage } from "@/lib/database";
 import { prisma } from "@/lib/prisma";
 import {
   normalizePlayerName,
@@ -244,7 +245,7 @@ async function saveGuestSpeed100Score(
 }
 
 export async function getPlayerIdentity(): Promise<PlayerIdentity> {
-  if (!isSupabaseConfigured() || !process.env.DATABASE_URL) {
+  if (!isSupabaseConfigured() || getDatabaseConfigErrorMessage()) {
     return { type: "guest" };
   }
 
@@ -271,7 +272,7 @@ export async function getPlayerIdentity(): Promise<PlayerIdentity> {
 export async function saveGameScore(
   input: z.infer<typeof SaveGameScoreSchema>
 ): Promise<SaveScoreResult> {
-  if (!process.env.DATABASE_URL) {
+  if (getDatabaseConfigErrorMessage()) {
     return { success: false, reason: "NOT_CONFIGURED" };
   }
 
@@ -321,8 +322,9 @@ export async function getLeaderboard(
   mode: LeaderboardMode,
   limit = 50
 ): Promise<LeaderboardResult> {
-  if (!process.env.DATABASE_URL) {
-    return { entries: [], dbError: "DATABASE_URL is not configured" };
+  const configError = getDatabaseConfigErrorMessage();
+  if (configError) {
+    return { entries: [], dbError: configError };
   }
 
   try {
@@ -370,7 +372,7 @@ export async function getLeaderboard(
 }
 
 export async function getMyScore() {
-  if (!isSupabaseConfigured() || !process.env.DATABASE_URL) return null;
+  if (!isSupabaseConfigured() || getDatabaseConfigErrorMessage()) return null;
 
   const authUser = await getAuthUser();
   if (!authUser) return null;

@@ -1,22 +1,19 @@
+import {
+  getDatabaseConfigErrorMessage,
+  maskDatabaseHost,
+  readRawDatabaseUrl,
+} from "@/lib/database";
 import { prisma } from "@/lib/prisma";
 
-function maskDatabaseHost(databaseUrl: string | undefined): string | null {
-  if (!databaseUrl) return null;
-  try {
-    return new URL(databaseUrl.replace(/^postgresql:/, "http:")).hostname;
-  } catch {
-    return null;
-  }
-}
-
 export async function GET() {
-  const host = maskDatabaseHost(process.env.DATABASE_URL);
+  const configError = getDatabaseConfigErrorMessage();
+  const host = maskDatabaseHost(readRawDatabaseUrl());
 
-  if (!process.env.DATABASE_URL) {
+  if (configError) {
     return Response.json({
       ok: false,
       step: "config",
-      message: "DATABASE_URL is not set",
+      message: configError,
       host,
     });
   }
