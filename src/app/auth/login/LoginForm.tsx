@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { sendMagicLink } from "@/actions/auth";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -14,24 +14,15 @@ export function LoginForm() {
     setLoading(true);
     setMessage(null);
 
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
+    const result = await sendMagicLink(email);
 
-      if (error) throw error;
+    if (result.success) {
       setMessage("ログインリンクをメールに送信しました。メールを確認してください。");
-    } catch {
-      setMessage(
-        "ログインに失敗しました。Supabase の設定（.env.local）を確認してください。"
-      );
-    } finally {
-      setLoading(false);
+    } else {
+      setMessage(result.message);
     }
+
+    setLoading(false);
   }
 
   return (
@@ -62,7 +53,15 @@ export function LoginForm() {
         </button>
       </form>
 
-      {message && <p className="mt-4 text-sm text-slate-300">{message}</p>}
+      {message && (
+        <p
+          className={`mt-4 text-sm ${
+            message.includes("送信しました") ? "text-emerald-400" : "text-rose-400"
+          }`}
+        >
+          {message}
+        </p>
+      )}
 
       <Link
         href="/"
