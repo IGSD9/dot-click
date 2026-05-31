@@ -1,17 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-
-function readEnv(name: string): string | undefined {
-  const value = process.env[name]?.trim();
-  if (!value) return undefined;
-  return value.replace(/^["']|["']$/g, "");
-}
+import { getSupabaseEnv } from "@/lib/supabase/env";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const url = readEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const key = readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const { url, key } = getSupabaseEnv();
 
   if (!url || !key) {
     return response;

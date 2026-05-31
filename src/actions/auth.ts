@@ -2,29 +2,28 @@
 
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { headers } from "next/headers";
-import { isSupabaseConfigured } from "@/lib/supabase/server";
-
-function readEnv(name: string): string | undefined {
-  const value = process.env[name]?.trim();
-  if (!value) return undefined;
-  return value.replace(/^["']|["']$/g, "");
-}
+import {
+  getSupabaseConfigErrorMessage,
+  getSupabaseEnv,
+} from "@/lib/supabase/env";
 
 export type SendMagicLinkResult =
   | { success: true }
   | { success: false; message: string };
 
 export async function sendMagicLink(email: string): Promise<SendMagicLinkResult> {
-  if (!isSupabaseConfigured()) {
-    return {
-      success: false,
-      message:
-        "Supabase が未設定です。Vercel → Settings → Environment Variables を確認してください。",
-    };
+  const configError = getSupabaseConfigErrorMessage();
+  if (configError) {
+    return { success: false, message: configError };
   }
 
-  const url = readEnv("NEXT_PUBLIC_SUPABASE_URL")!;
-  const key = readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")!;
+  const { url, key } = getSupabaseEnv();
+  if (!url || !key) {
+    return {
+      success: false,
+      message: "Supabase の設定を確認してください。",
+    };
+  }
 
   const headersList = await headers();
   const host = headersList.get("x-forwarded-host") ?? headersList.get("host");
