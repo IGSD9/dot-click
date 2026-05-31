@@ -38,6 +38,7 @@ export function SurvivalGameScreen() {
   );
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveUpdated, setSaveUpdated] = useState<boolean | undefined>();
+  const [saveMessage, setSaveMessage] = useState<string | undefined>();
   const [countdown, setCountdown] = useState<number | null>(null);
   const [identity, setIdentity] = useState<PlayerIdentity | null>(null);
 
@@ -75,6 +76,7 @@ export function SurvivalGameScreen() {
   const saveScore = useCallback(
     async (clicks: number, guestName?: string) => {
       setSaveStatus("saving");
+      setSaveMessage(undefined);
       const response = await saveGameScore({
         mode: "survival",
         clicks,
@@ -87,13 +89,16 @@ export function SurvivalGameScreen() {
         return;
       }
       if (response.reason === "INVALID_NAME") {
+        setSaveMessage(response.message);
         setSaveStatus("invalid_name");
         return;
       }
       if (response.reason === "NOT_CONFIGURED") {
+        setSaveMessage(response.message);
         setSaveStatus("not_configured");
         return;
       }
+      setSaveMessage(response.message);
       setSaveStatus("error");
     },
     []
@@ -151,6 +156,7 @@ export function SurvivalGameScreen() {
     setState(startSurvivalGame(playBoundsRef.current));
     setSaveStatus("idle");
     setSaveUpdated(undefined);
+    setSaveMessage(undefined);
   }, [clearTimer, measurePlayArea]);
 
   const handleStart = useCallback(() => {
@@ -288,6 +294,7 @@ export function SurvivalGameScreen() {
           score={state.score}
           saveStatus={saveStatus}
           saveUpdated={saveUpdated}
+          saveMessage={saveMessage}
           isAuthenticated={isAuthenticated}
           onGuestRegister={isAuthenticated ? undefined : handleGuestRegister}
           onGuestSkip={isAuthenticated ? undefined : handleGuestSkip}

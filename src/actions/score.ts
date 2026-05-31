@@ -32,6 +32,7 @@ export type SaveScoreResult =
   | {
       success: false;
       reason: "INVALID_NAME" | "NOT_CONFIGURED" | "DB_ERROR";
+      message?: string;
     };
 
 export type LeaderboardMode = "survival" | "speed100";
@@ -272,8 +273,9 @@ export async function getPlayerIdentity(): Promise<PlayerIdentity> {
 export async function saveGameScore(
   input: z.infer<typeof SaveGameScoreSchema>
 ): Promise<SaveScoreResult> {
-  if (getDatabaseConfigErrorMessage()) {
-    return { success: false, reason: "NOT_CONFIGURED" };
+  const configError = getDatabaseConfigErrorMessage();
+  if (configError) {
+    return { success: false, reason: "NOT_CONFIGURED", message: configError };
   }
 
   let parsed: z.infer<typeof SaveGameScoreSchema>;

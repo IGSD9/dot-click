@@ -36,6 +36,7 @@ export function Speed100GameScreen() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveUpdated, setSaveUpdated] = useState<boolean | undefined>();
+  const [saveMessage, setSaveMessage] = useState<string | undefined>();
   const [identity, setIdentity] = useState<PlayerIdentity | null>(null);
 
   const isAuthenticated = identity?.type === "authenticated";
@@ -85,6 +86,7 @@ export function Speed100GameScreen() {
 
   const saveScore = useCallback(async (elapsed: number, guestName?: string) => {
     setSaveStatus("saving");
+    setSaveMessage(undefined);
     const response = await saveGameScore({
       mode: "speed100",
       elapsedMs: elapsed,
@@ -97,13 +99,16 @@ export function Speed100GameScreen() {
       return;
     }
     if (response.reason === "INVALID_NAME") {
+      setSaveMessage(response.message);
       setSaveStatus("invalid_name");
       return;
     }
     if (response.reason === "NOT_CONFIGURED") {
+      setSaveMessage(response.message);
       setSaveStatus("not_configured");
       return;
     }
+    setSaveMessage(response.message);
     setSaveStatus("error");
   }, []);
 
@@ -125,6 +130,7 @@ export function Speed100GameScreen() {
     setElapsedMs(0);
     setSaveStatus("idle");
     setSaveUpdated(undefined);
+    setSaveMessage(undefined);
   }, [measurePlayArea]);
 
   const handleStart = useCallback(() => {
@@ -241,6 +247,7 @@ export function Speed100GameScreen() {
           elapsedMs={state.elapsedMs}
           saveStatus={saveStatus}
           saveUpdated={saveUpdated}
+          saveMessage={saveMessage}
           isAuthenticated={isAuthenticated}
           onGuestRegister={isAuthenticated ? undefined : handleGuestRegister}
           onGuestSkip={isAuthenticated ? undefined : handleGuestSkip}

@@ -21,6 +21,7 @@ type GameOverlayProps = {
   elapsedMs?: number;
   saveStatus?: SaveStatus;
   saveUpdated?: boolean;
+  saveMessage?: string;
   isAuthenticated?: boolean;
   onRetry: () => void;
   onGuestRegister?: (name: string) => void;
@@ -31,9 +32,11 @@ type GameOverlayProps = {
 function SaveMessage({
   status,
   updated,
+  detail,
 }: {
   status: Exclude<SaveStatus, "idle" | "saving">;
   updated?: boolean;
+  detail?: string;
 }) {
   if (status === "saved") {
     const message = updated
@@ -52,9 +55,9 @@ function SaveMessage({
     Exclude<SaveStatus, "idle" | "saving" | "saved" | "skipped">,
     string
   > = {
-    not_configured: "DB 未設定のためスコアは保存されません",
-    error: "ランキングへの登録に失敗しました",
-    invalid_name: "プレイヤー名が無効です。もう一度お試しください",
+    not_configured: detail ?? "DB 未設定のためスコアは保存されません",
+    error: detail ?? "ランキングへの登録に失敗しました",
+    invalid_name: detail ?? "プレイヤー名が無効です。もう一度お試しください",
   };
 
   return <p className="mt-3 text-sm text-rose-400">{messages[status]}</p>;
@@ -65,6 +68,7 @@ export function GameOverlay({
   elapsedMs = 0,
   saveStatus = "idle",
   saveUpdated,
+  saveMessage,
   isAuthenticated = false,
   onRetry,
   onGuestRegister,
@@ -124,10 +128,18 @@ export function GameOverlay({
         {saveStatus !== "saving" &&
           saveStatus !== "idle" &&
           saveStatus !== "invalid_name" && (
-            <SaveMessage status={saveStatus} updated={saveUpdated} />
+            <SaveMessage
+              status={saveStatus}
+              updated={saveUpdated}
+              detail={saveMessage}
+            />
           )}
         {saveStatus === "invalid_name" && !showGuestNameForm && (
-          <SaveMessage status={saveStatus} updated={saveUpdated} />
+          <SaveMessage
+            status={saveStatus}
+            updated={saveUpdated}
+            detail={saveMessage}
+          />
         )}
 
         {showGuestPrompt && (
