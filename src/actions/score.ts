@@ -22,7 +22,12 @@ const SaveGameScoreSchema = z.discriminatedUnion("mode", [
   }),
   z.object({
     mode: z.literal("speed100"),
-    elapsedMs: z.number().int().min(1).max(3_600_000),
+    elapsedMs: z
+      .number()
+      .min(1)
+      .max(3_600_000)
+      .transform(Math.round)
+      .pipe(z.number().int()),
     guestName: z.string().max(PLAYER_NAME_MAX).optional(),
   }),
 ]);
@@ -282,7 +287,11 @@ export async function saveGameScore(
   try {
     parsed = SaveGameScoreSchema.parse(input);
   } catch {
-    return { success: false, reason: "INVALID_NAME" };
+    return {
+      success: false,
+      reason: "DB_ERROR",
+      message: "スコアデータが不正です。もう一度お試しください",
+    };
   }
 
   try {

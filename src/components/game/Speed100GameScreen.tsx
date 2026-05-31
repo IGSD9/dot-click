@@ -115,7 +115,7 @@ export function Speed100GameScreen() {
   const handleGuestRegister = useCallback(
     (name: string) => {
       writeStoredPlayerName(name);
-      void saveScore(pendingElapsedMsRef.current, name);
+      void saveScore(Math.round(pendingElapsedMsRef.current), name);
     },
     [saveScore]
   );
@@ -181,9 +181,9 @@ export function Speed100GameScreen() {
   useEffect(() => {
     if (state.phase !== "clear") return;
 
-    pendingElapsedMsRef.current = state.elapsedMs;
+    pendingElapsedMsRef.current = Math.round(state.elapsedMs);
     if (isAuthenticated) {
-      void saveScore(state.elapsedMs);
+      void saveScore(Math.round(state.elapsedMs));
     }
   }, [isAuthenticated, saveScore, state.elapsedMs, state.phase]);
 

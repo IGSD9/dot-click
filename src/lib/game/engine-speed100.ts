@@ -30,7 +30,7 @@ export function handleSpeed100Hit(
 ): Speed100State {
   const taps = state.taps + 1;
   const startedAt = state.startedAt ?? performance.now();
-  const elapsedMs = performance.now() - startedAt;
+  const elapsedMs = Math.round(performance.now() - startedAt);
 
   if (taps >= state.targetTaps) {
     return {
