@@ -13,8 +13,8 @@ export default async function GamePage({ searchParams }: GamePageProps) {
   const modeInfo = GAME_MODES[mode];
 
   return (
-    <div className="flex min-h-[100dvh] flex-col">
-      <SiteHeader subtitle={modeInfo.name} />
+    <div className="flex h-[100dvh] flex-col overflow-hidden">
+      <SiteHeader subtitle={modeInfo.name} variant="game" />
       <GameScreen mode={mode} />
     </div>
   );

@@ -132,12 +132,6 @@ export function Speed100GameScreen() {
         />
       )}
 
-      {state.phase === "playing" && (
-        <p className="pointer-events-none absolute inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] text-center text-xs text-slate-500">
-          20個タップした時間を競う　｜　PC: 左クリック / スマホ: タップ
-        </p>
-      )}
-
       {state.phase === "ready" && (
         <GameOverlay variant="ready" mode="speed100" onRetry={handleStart} />
       )}

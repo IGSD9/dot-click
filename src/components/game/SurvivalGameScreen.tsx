@@ -192,12 +192,6 @@ export function SurvivalGameScreen() {
         />
       )}
 
-      {state.phase === "playing" && (
-        <p className="pointer-events-none absolute inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] text-center text-xs text-slate-500">
-          PC: マウス左クリック　｜　スマホ: 指でタップ
-        </p>
-      )}
-
       {state.phase === "ready" && (
         <GameOverlay
           variant="ready"

@@ -24,7 +24,8 @@ body {
   user-select: none;
   -webkit-user-select: none;
   overscroll-behavior: none;
-  min-height: 100dvh;
+  min-height: 0;
+  flex: 1;
   width: 100%;
 }
 

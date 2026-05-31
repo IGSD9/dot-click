@@ -13,27 +13,27 @@ export const Speed100HUD = forwardRef<HTMLElement, Speed100HUDProps>(
     return (
       <header
         ref={ref}
-        className="pointer-events-none absolute inset-x-0 top-0 z-10 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-2"
+        className="pointer-events-none absolute inset-x-0 top-0 z-10 px-4 pb-3 pt-[max(0.5rem,env(safe-area-inset-top))] sm:pt-[max(1rem,env(safe-area-inset-top))]"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-widest text-slate-400">
+            <p className="text-sm font-medium uppercase tracking-widest text-slate-400 sm:text-xs">
               Taps
             </p>
-            <p className="text-3xl font-bold tabular-nums text-white">
+            <p className="text-4xl font-bold tabular-nums text-white sm:text-3xl">
               {taps}
-              <span className="text-lg text-slate-500"> / {targetTaps}</span>
+              <span className="text-xl text-slate-500 sm:text-lg"> / {targetTaps}</span>
             </p>
           </div>
 
           <div
             data-timer-zone
-            className="min-w-[7rem] rounded-2xl border border-slate-700/80 bg-slate-900/80 px-4 py-2 text-right"
+            className="min-w-[7.5rem] rounded-2xl border border-slate-700/80 bg-slate-900/80 px-4 py-2.5 text-right sm:min-w-[7rem] sm:py-2"
           >
-            <p className="text-xs uppercase tracking-widest text-slate-400">
+            <p className="text-sm font-medium uppercase tracking-widest text-slate-400 sm:text-xs">
               Time
             </p>
-            <p className="text-3xl font-bold tabular-nums text-emerald-400">
+            <p className="text-4xl font-bold tabular-nums text-emerald-400 sm:text-3xl">
               {phase === "ready" ? "0.00" : formatElapsedSeconds(elapsedMs)}
               <span className="ml-0.5 text-base font-semibold text-slate-400">
                 秒
