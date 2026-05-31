@@ -3,22 +3,35 @@
 import { z } from "zod";
 import { upsertUserFromAuth } from "@/actions/user";
 import { prisma } from "@/lib/prisma";
+import {
+  normalizePlayerName,
+  PLAYER_NAME_MAX,
+  PLAYER_NAME_MIN,
+  validatePlayerName,
+} from "@/lib/player";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
-const SaveScoreSchema = z.discriminatedUnion("mode", [
+const GAME_MODE_TARGET_SCORE = 20;
+
+const SaveGameScoreSchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("survival"),
     clicks: z.number().int().min(0).max(999999),
+    guestName: z.string().max(PLAYER_NAME_MAX).optional(),
   }),
   z.object({
     mode: z.literal("speed100"),
     elapsedMs: z.number().int().min(1).max(3_600_000),
+    guestName: z.string().max(PLAYER_NAME_MAX).optional(),
   }),
 ]);
 
 export type SaveScoreResult =
   | { success: true; updated: boolean; totalScore?: number; elapsedMs?: number }
-  | { success: false; reason: "UNAUTHORIZED" | "NOT_CONFIGURED" | "DB_ERROR" };
+  | {
+      success: false;
+      reason: "INVALID_NAME" | "NOT_CONFIGURED" | "DB_ERROR";
+    };
 
 export type LeaderboardMode = "survival" | "speed100";
 
@@ -29,6 +42,10 @@ export type LeaderboardEntry = {
   totalScore?: number;
   elapsedMs?: number;
 };
+
+export type PlayerIdentity =
+  | { type: "authenticated"; name: string; email: string }
+  | { type: "guest" };
 
 async function getAuthUser() {
   if (!isSupabaseConfigured()) return null;
@@ -42,112 +59,252 @@ async function getAuthUser() {
   return { id: user.id, email: user.email };
 }
 
-export async function saveScore(
-  input: z.infer<typeof SaveScoreSchema>
+function displayName(score: {
+  guestName: string | null;
+  user: { name: string } | null;
+}): string {
+  return score.guestName ?? score.user?.name ?? "Unknown";
+}
+
+async function saveAuthSurvivalScore(
+  userId: string,
+  clicks: number
 ): Promise<SaveScoreResult> {
-  if (!isSupabaseConfigured() || !process.env.DATABASE_URL) {
-    return { success: false, reason: "NOT_CONFIGURED" };
-  }
+  const existing = await prisma.score.findUnique({
+    where: { userId_mode: { userId, mode: "survival" } },
+  });
 
-  const parsed = SaveScoreSchema.parse(input);
-  const authUser = await getAuthUser();
-
-  if (!authUser) {
-    return { success: false, reason: "UNAUTHORIZED" };
-  }
-
-  try {
-    await upsertUserFromAuth(authUser);
-
-    const existing = await prisma.score.findUnique({
-      where: {
-        userId_mode: { userId: authUser.id, mode: parsed.mode },
+  if (!existing) {
+    const score = await prisma.score.create({
+      data: {
+        userId,
+        mode: "survival",
+        maxStage: 0,
+        totalScore: clicks,
       },
     });
+    return { success: true, updated: true, totalScore: score.totalScore };
+  }
 
-    if (parsed.mode === "survival") {
-      if (!existing) {
-        const score = await prisma.score.create({
-          data: {
-            userId: authUser.id,
-            mode: "survival",
-            maxStage: 0,
-            totalScore: parsed.clicks,
-          },
-        });
-        return {
-          success: true,
-          updated: true,
-          totalScore: score.totalScore,
-        };
-      }
+  if (clicks <= existing.totalScore) {
+    return {
+      success: true,
+      updated: false,
+      totalScore: existing.totalScore,
+    };
+  }
 
-      if (parsed.clicks <= existing.totalScore) {
-        return {
-          success: true,
-          updated: false,
-          totalScore: existing.totalScore,
-        };
-      }
+  const score = await prisma.score.update({
+    where: { userId_mode: { userId, mode: "survival" } },
+    data: { totalScore: clicks },
+  });
 
-      const score = await prisma.score.update({
-        where: {
-          userId_mode: { userId: authUser.id, mode: "survival" },
-        },
-        data: { totalScore: parsed.clicks },
-      });
+  return { success: true, updated: true, totalScore: score.totalScore };
+}
 
-      return {
-        success: true,
-        updated: true,
-        totalScore: score.totalScore,
-      };
-    }
+async function saveGuestSurvivalScore(
+  guestName: string,
+  clicks: number
+): Promise<SaveScoreResult> {
+  const existing = await prisma.score.findFirst({
+    where: {
+      mode: "survival",
+      userId: null,
+      guestName,
+    },
+  });
 
-    if (!existing) {
-      const score = await prisma.score.create({
-        data: {
-          userId: authUser.id,
-          mode: "speed100",
-          maxStage: 0,
-          totalScore: GAME_MODE_TARGET_SCORE,
-          elapsedMs: parsed.elapsedMs,
-        },
-      });
-      return {
-        success: true,
-        updated: true,
-        elapsedMs: score.elapsedMs ?? parsed.elapsedMs,
-      };
-    }
-
-    const currentElapsedMs = existing.elapsedMs ?? Number.MAX_SAFE_INTEGER;
-    if (parsed.elapsedMs >= currentElapsedMs) {
-      return {
-        success: true,
-        updated: false,
-        elapsedMs: existing.elapsedMs ?? parsed.elapsedMs,
-      };
-    }
-
-    const score = await prisma.score.update({
-      where: {
-        userId_mode: { userId: authUser.id, mode: "speed100" },
+  if (!existing) {
+    const score = await prisma.score.create({
+      data: {
+        mode: "survival",
+        guestName,
+        maxStage: 0,
+        totalScore: clicks,
       },
-      data: { elapsedMs: parsed.elapsedMs, totalScore: GAME_MODE_TARGET_SCORE },
     });
+    return { success: true, updated: true, totalScore: score.totalScore };
+  }
 
+  if (clicks <= existing.totalScore) {
+    return {
+      success: true,
+      updated: false,
+      totalScore: existing.totalScore,
+    };
+  }
+
+  const score = await prisma.score.update({
+    where: { id: existing.id },
+    data: { totalScore: clicks },
+  });
+
+  return { success: true, updated: true, totalScore: score.totalScore };
+}
+
+async function saveAuthSpeed100Score(
+  userId: string,
+  elapsedMs: number
+): Promise<SaveScoreResult> {
+  const existing = await prisma.score.findUnique({
+    where: { userId_mode: { userId, mode: "speed100" } },
+  });
+
+  if (!existing) {
+    const score = await prisma.score.create({
+      data: {
+        userId,
+        mode: "speed100",
+        maxStage: 0,
+        totalScore: GAME_MODE_TARGET_SCORE,
+        elapsedMs,
+      },
+    });
     return {
       success: true,
       updated: true,
-      elapsedMs: score.elapsedMs ?? parsed.elapsedMs,
+      elapsedMs: score.elapsedMs ?? elapsedMs,
     };
+  }
+
+  const currentElapsedMs = existing.elapsedMs ?? Number.MAX_SAFE_INTEGER;
+  if (elapsedMs >= currentElapsedMs) {
+    return {
+      success: true,
+      updated: false,
+      elapsedMs: existing.elapsedMs ?? elapsedMs,
+    };
+  }
+
+  const score = await prisma.score.update({
+    where: { userId_mode: { userId, mode: "speed100" } },
+    data: { elapsedMs, totalScore: GAME_MODE_TARGET_SCORE },
+  });
+
+  return {
+    success: true,
+    updated: true,
+    elapsedMs: score.elapsedMs ?? elapsedMs,
+  };
+}
+
+async function saveGuestSpeed100Score(
+  guestName: string,
+  elapsedMs: number
+): Promise<SaveScoreResult> {
+  const existing = await prisma.score.findFirst({
+    where: {
+      mode: "speed100",
+      userId: null,
+      guestName,
+    },
+  });
+
+  if (!existing) {
+    const score = await prisma.score.create({
+      data: {
+        mode: "speed100",
+        guestName,
+        maxStage: 0,
+        totalScore: GAME_MODE_TARGET_SCORE,
+        elapsedMs,
+      },
+    });
+    return {
+      success: true,
+      updated: true,
+      elapsedMs: score.elapsedMs ?? elapsedMs,
+    };
+  }
+
+  const currentElapsedMs = existing.elapsedMs ?? Number.MAX_SAFE_INTEGER;
+  if (elapsedMs >= currentElapsedMs) {
+    return {
+      success: true,
+      updated: false,
+      elapsedMs: existing.elapsedMs ?? elapsedMs,
+    };
+  }
+
+  const score = await prisma.score.update({
+    where: { id: existing.id },
+    data: { elapsedMs, totalScore: GAME_MODE_TARGET_SCORE },
+  });
+
+  return {
+    success: true,
+    updated: true,
+    elapsedMs: score.elapsedMs ?? elapsedMs,
+  };
+}
+
+export async function getPlayerIdentity(): Promise<PlayerIdentity> {
+  if (!isSupabaseConfigured() || !process.env.DATABASE_URL) {
+    return { type: "guest" };
+  }
+
+  const authUser = await getAuthUser();
+  if (!authUser) return { type: "guest" };
+
+  try {
+    await upsertUserFromAuth(authUser);
+    const user = await prisma.user.findUnique({
+      where: { id: authUser.id },
+      select: { name: true },
+    });
+
+    return {
+      type: "authenticated",
+      name: user?.name ?? authUser.email.split("@")[0] ?? "player",
+      email: authUser.email,
+    };
+  } catch {
+    return { type: "guest" };
+  }
+}
+
+export async function saveGameScore(
+  input: z.infer<typeof SaveGameScoreSchema>
+): Promise<SaveScoreResult> {
+  if (!process.env.DATABASE_URL) {
+    return { success: false, reason: "NOT_CONFIGURED" };
+  }
+
+  const parsed = SaveGameScoreSchema.parse(input);
+
+  try {
+    const authUser = await getAuthUser();
+
+    if (authUser) {
+      await upsertUserFromAuth(authUser);
+
+      if (parsed.mode === "survival") {
+        return saveAuthSurvivalScore(authUser.id, parsed.clicks);
+      }
+      return saveAuthSpeed100Score(authUser.id, parsed.elapsedMs);
+    }
+
+    const guestName = normalizePlayerName(parsed.guestName ?? "");
+    const nameError = validatePlayerName(guestName);
+    if (nameError) {
+      return { success: false, reason: "INVALID_NAME" };
+    }
+
+    if (parsed.mode === "survival") {
+      return saveGuestSurvivalScore(guestName, parsed.clicks);
+    }
+    return saveGuestSpeed100Score(guestName, parsed.elapsedMs);
   } catch {
     return { success: false, reason: "DB_ERROR" };
   }
 }
 
-const GAME_MODE_TARGET_SCORE = 20;
+/** @deprecated Use saveGameScore */
+export async function saveScore(
+  input: z.infer<typeof SaveGameScoreSchema>
+): Promise<SaveScoreResult> {
+  return saveGameScore(input);
+}
 
 export async function getLeaderboard(
   mode: LeaderboardMode,
@@ -168,7 +325,7 @@ export async function getLeaderboard(
       return scores.map((score, index) => ({
         rank: index + 1,
         mode: "survival",
-        userName: score.user.name,
+        userName: displayName(score),
         totalScore: score.totalScore,
       }));
     }
@@ -183,7 +340,7 @@ export async function getLeaderboard(
     return scores.map((score, index) => ({
       rank: index + 1,
       mode: "speed100",
-      userName: score.user.name,
+      userName: displayName(score),
       elapsedMs: score.elapsedMs ?? undefined,
     }));
   } catch {

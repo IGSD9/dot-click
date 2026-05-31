@@ -19,9 +19,10 @@ model User {
 
 model Score {
   id         String   @id @default(cuid())
-  userId     String
+  userId     String?
+  guestName  String?
   mode       String   @default("survival")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   maxStage   Int      @default(1)
   totalScore Int      @default(0)
   elapsedMs  Int?
@@ -32,4 +33,5 @@ model Score {
   @@index([maxStage(sort: Desc)])
   @@index([mode, totalScore(sort: Desc)])
   @@index([mode, elapsedMs(sort: Asc)])
+  @@index([mode, guestName])
 }

@@ -23,7 +23,9 @@ export default function Home() {
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
             Dot Click
           </h1>
-          <p className="mt-3 text-slate-400">モードを選んでプレイ</p>
+          <p className="mt-3 text-slate-400">
+            名前を決めてすぐプレイ。ログインすると記録を引き継げます
+          </p>
         </div>
 
         <div className="relative grid w-full max-w-lg gap-4">

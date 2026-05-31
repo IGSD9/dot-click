@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { saveScore } from "@/actions/score";
+import { getPlayerIdentity, saveGameScore } from "@/actions/score";
+import type { PlayerIdentity } from "@/actions/score";
 import { GAME_CONFIG } from "@/lib/game/constants";
 import {
   createSurvivalInitialState,
@@ -12,9 +13,16 @@ import {
 } from "@/lib/game/engine-survival";
 import type { PlayAreaBounds } from "@/lib/game/spawn";
 import type { SurvivalState } from "@/lib/game/types";
+import {
+  normalizePlayerName,
+  readStoredPlayerName,
+  validatePlayerName,
+  writeStoredPlayerName,
+} from "@/lib/player";
 import { CountdownOverlay } from "./CountdownOverlay";
 import { GameHUD } from "./GameHUD";
 import { GameOverlay, type SaveStatus } from "./GameOverlay";
+import { ReadyOverlay } from "./ReadyOverlay";
 
 export function SurvivalGameScreen() {
   const areaRef = useRef<HTMLDivElement>(null);
@@ -33,7 +41,11 @@ export function SurvivalGameScreen() {
     GAME_CONFIG.INITIAL_TIME_MS
   );
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [saveUpdated, setSaveUpdated] = useState<boolean | undefined>();
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [identity, setIdentity] = useState<PlayerIdentity | null>(null);
+  const [guestName, setGuestName] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -64,24 +76,37 @@ export function SurvivalGameScreen() {
     };
   }, []);
 
-  const onGameOver = useCallback(async (clicks: number) => {
-    setSaveStatus("saving");
-    const response = await saveScore({ mode: "survival", clicks });
+  const resolveGuestName = useCallback(() => {
+    if (identity?.type === "authenticated") return undefined;
+    return normalizePlayerName(guestName);
+  }, [guestName, identity?.type]);
 
-    if (response.success) {
-      setSaveStatus("saved");
-      return;
-    }
-    if (response.reason === "UNAUTHORIZED") {
-      setSaveStatus("unauthorized");
-      return;
-    }
-    if (response.reason === "NOT_CONFIGURED") {
-      setSaveStatus("not_configured");
-      return;
-    }
-    setSaveStatus("error");
-  }, []);
+  const onGameOver = useCallback(
+    async (clicks: number) => {
+      setSaveStatus("saving");
+      const response = await saveGameScore({
+        mode: "survival",
+        clicks,
+        guestName: resolveGuestName(),
+      });
+
+      if (response.success) {
+        setSaveUpdated(response.updated);
+        setSaveStatus("saved");
+        return;
+      }
+      if (response.reason === "INVALID_NAME") {
+        setSaveStatus("invalid_name");
+        return;
+      }
+      if (response.reason === "NOT_CONFIGURED") {
+        setSaveStatus("not_configured");
+        return;
+      }
+      setSaveStatus("error");
+    },
+    [resolveGuestName]
+  );
 
   const handleTimeout = useCallback(() => {
     setState((prev) => {
@@ -112,12 +137,25 @@ export function SurvivalGameScreen() {
     clearTimer();
     setState(startSurvivalGame(playBoundsRef.current));
     setSaveStatus("idle");
+    setSaveUpdated(undefined);
   }, [clearTimer, measurePlayArea]);
 
   const handleStart = useCallback(() => {
+    if (identity?.type !== "authenticated") {
+      const error = validatePlayerName(guestName);
+      if (error) {
+        setNameError(error);
+        return;
+      }
+      const normalized = normalizePlayerName(guestName);
+      writeStoredPlayerName(normalized);
+      setGuestName(normalized);
+      setNameError(null);
+    }
+
     clearCountdownTimer();
     setCountdown(3);
-  }, [clearCountdownTimer]);
+  }, [clearCountdownTimer, guestName, identity?.type]);
 
   const handleDotPointerDown = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -137,6 +175,11 @@ export function SurvivalGameScreen() {
     },
     [clearTimer]
   );
+
+  useEffect(() => {
+    setGuestName(readStoredPlayerName());
+    void getPlayerIdentity().then(setIdentity);
+  }, []);
 
   useEffect(() => {
     measurePlayArea();
@@ -235,10 +278,16 @@ export function SurvivalGameScreen() {
       {countdown !== null && <CountdownOverlay count={countdown} />}
 
       {state.phase === "ready" && countdown === null && (
-        <GameOverlay
-          variant="ready"
+        <ReadyOverlay
           mode="survival"
-          onRetry={handleStart}
+          identity={identity}
+          guestName={guestName}
+          nameError={nameError}
+          onGuestNameChange={(value) => {
+            setGuestName(value);
+            if (nameError) setNameError(null);
+          }}
+          onStart={handleStart}
         />
       )}
 
@@ -248,6 +297,8 @@ export function SurvivalGameScreen() {
           mode="survival"
           score={state.score}
           saveStatus={saveStatus}
+          saveUpdated={saveUpdated}
+          isAuthenticated={identity?.type === "authenticated"}
           onRetry={handleStart}
         />
       )}

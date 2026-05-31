@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { saveScore } from "@/actions/score";
+import { getPlayerIdentity, saveGameScore } from "@/actions/score";
+import type { PlayerIdentity } from "@/actions/score";
 import { GAME_CONFIG } from "@/lib/game/constants";
 import {
   createSpeed100InitialState,
@@ -11,9 +12,16 @@ import {
 } from "@/lib/game/engine-speed100";
 import type { PlayAreaBounds } from "@/lib/game/spawn";
 import type { Speed100State } from "@/lib/game/types";
+import {
+  normalizePlayerName,
+  readStoredPlayerName,
+  validatePlayerName,
+  writeStoredPlayerName,
+} from "@/lib/player";
 import { CountdownOverlay } from "./CountdownOverlay";
 import { GameOverlay } from "./GameOverlay";
 import type { SaveStatus } from "./GameOverlay";
+import { ReadyOverlay } from "./ReadyOverlay";
 import { Speed100HUD } from "./Speed100HUD";
 
 export function Speed100GameScreen() {
@@ -31,6 +39,10 @@ export function Speed100GameScreen() {
   const [elapsedMs, setElapsedMs] = useState(0);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [saveUpdated, setSaveUpdated] = useState<boolean | undefined>();
+  const [identity, setIdentity] = useState<PlayerIdentity | null>(null);
+  const [guestName, setGuestName] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const clearCountdownTimer = useCallback(() => {
     if (countdownTimerRef.current !== null) {
@@ -75,17 +87,35 @@ export function Speed100GameScreen() {
     };
   }, []);
 
+  const resolveGuestName = useCallback(() => {
+    if (identity?.type === "authenticated") return undefined;
+    return normalizePlayerName(guestName);
+  }, [guestName, identity?.type]);
+
   const beginSpeed100Game = useCallback(() => {
     measurePlayArea();
     setState(startSpeed100Game(playBoundsRef.current));
     setElapsedMs(0);
     setSaveStatus("idle");
+    setSaveUpdated(undefined);
   }, [measurePlayArea]);
 
   const handleStart = useCallback(() => {
+    if (identity?.type !== "authenticated") {
+      const error = validatePlayerName(guestName);
+      if (error) {
+        setNameError(error);
+        return;
+      }
+      const normalized = normalizePlayerName(guestName);
+      writeStoredPlayerName(normalized);
+      setGuestName(normalized);
+      setNameError(null);
+    }
+
     clearCountdownTimer();
     setCountdown(3);
-  }, [clearCountdownTimer]);
+  }, [clearCountdownTimer, guestName, identity?.type]);
 
   const handleDotPointerDown = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -102,6 +132,11 @@ export function Speed100GameScreen() {
     },
     []
   );
+
+  useEffect(() => {
+    setGuestName(readStoredPlayerName());
+    void getPlayerIdentity().then(setIdentity);
+  }, []);
 
   useEffect(() => {
     measurePlayArea();
@@ -127,24 +162,27 @@ export function Speed100GameScreen() {
     if (state.phase !== "clear") return;
     setSaveStatus("saving");
 
-    void saveScore({ mode: "speed100", elapsedMs: state.elapsedMs }).then(
-      (response) => {
-        if (response.success) {
-          setSaveStatus("saved");
-          return;
-        }
-        if (response.reason === "UNAUTHORIZED") {
-          setSaveStatus("unauthorized");
-          return;
-        }
-        if (response.reason === "NOT_CONFIGURED") {
-          setSaveStatus("not_configured");
-          return;
-        }
-        setSaveStatus("error");
+    void saveGameScore({
+      mode: "speed100",
+      elapsedMs: state.elapsedMs,
+      guestName: resolveGuestName(),
+    }).then((response) => {
+      if (response.success) {
+        setSaveUpdated(response.updated);
+        setSaveStatus("saved");
+        return;
       }
-    );
-  }, [state.elapsedMs, state.phase]);
+      if (response.reason === "INVALID_NAME") {
+        setSaveStatus("invalid_name");
+        return;
+      }
+      if (response.reason === "NOT_CONFIGURED") {
+        setSaveStatus("not_configured");
+        return;
+      }
+      setSaveStatus("error");
+    });
+  }, [resolveGuestName, state.elapsedMs, state.phase]);
 
   useEffect(() => {
     if (countdown === null) return;
@@ -196,7 +234,17 @@ export function Speed100GameScreen() {
       {countdown !== null && <CountdownOverlay count={countdown} />}
 
       {state.phase === "ready" && countdown === null && (
-        <GameOverlay variant="ready" mode="speed100" onRetry={handleStart} />
+        <ReadyOverlay
+          mode="speed100"
+          identity={identity}
+          guestName={guestName}
+          nameError={nameError}
+          onGuestNameChange={(value) => {
+            setGuestName(value);
+            if (nameError) setNameError(null);
+          }}
+          onStart={handleStart}
+        />
       )}
 
       {state.phase === "clear" && countdown === null && (
@@ -205,6 +253,8 @@ export function Speed100GameScreen() {
           mode="speed100"
           elapsedMs={state.elapsedMs}
           saveStatus={saveStatus}
+          saveUpdated={saveUpdated}
+          isAuthenticated={identity?.type === "authenticated"}
           onRetry={handleStart}
         />
       )}
