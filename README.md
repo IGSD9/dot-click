@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HitArrow
 
-## Getting Started
+回転する的に矢を刺す Web カジュアルゲーム。
 
-First, run the development server:
+## 開発方針
+
+- **当面:** ブラウザ（PC / スマホ）でプレイできれば OK
+- **最終:** PWA でホーム画面追加（Step 4）
+
+## セットアップ
 
 ```bash
+npm install
+cp .env.example .env.local   # Supabase / DATABASE_URL を設定
+npm run db:migrate           # DB テーブル作成
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000 を PC / スマホブラウザで開く。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Step 進捗
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Step | 内容 | 状態 |
+|------|------|------|
+| 1 | 環境構築・DB | ✅ |
+| 2 | ゲーム本体（PC/スマホ操作） | ✅ |
+| 3 | ログイン・スコア・ランキング | ✅ |
+| 4 | 見た目・PWA | 未着手 |
 
-## Learn More
+設計書: [基本設計書.md](./基本設計書.md) / [詳細設計書.md](./詳細設計書.md)
 
-To learn more about Next.js, take a look at the following resources:
+## Git で保存する
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+git add .
+git commit -m "変更内容のメモ"
+git push                     # GitHub 等にアップロード（初回は remote 設定が必要）
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+詳しくは基本設計書「付録 F. Git でコードを保存する」を参照。
 
-## Deploy on Vercel
+**注意:** `.env.local` は Git に含めない（秘密情報が入るため）。
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Supabase 設定（スコア保存を使う場合）
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. [Supabase](https://supabase.com) でプロジェクト作成
+2. `.env.local` に URL / ANON KEY / DATABASE_URL を設定
+3. Auth → URL Configuration に `http://localhost:3000/auth/callback` を追加
+4. `npm run db:migrate`
