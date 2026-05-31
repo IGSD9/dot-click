@@ -180,7 +180,7 @@ export function SurvivalGameScreen() {
   useEffect(() => {
     if (countdown === null) return;
 
-    if (countdown <= 1) {
+    if (countdown === 0) {
       setCountdown(null);
       beginSurvivalGame();
       return;
@@ -234,7 +234,7 @@ export function SurvivalGameScreen() {
 
       {countdown !== null && <CountdownOverlay count={countdown} />}
 
-      {state.phase === "ready" && (
+      {state.phase === "ready" && countdown === null && (
         <GameOverlay
           variant="ready"
           mode="survival"
@@ -242,7 +242,7 @@ export function SurvivalGameScreen() {
         />
       )}
 
-      {state.phase === "gameover" && (
+      {state.phase === "gameover" && countdown === null && (
         <GameOverlay
           variant="gameover"
           mode="survival"

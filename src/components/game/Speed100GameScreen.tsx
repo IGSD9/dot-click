@@ -149,7 +149,7 @@ export function Speed100GameScreen() {
   useEffect(() => {
     if (countdown === null) return;
 
-    if (countdown <= 1) {
+    if (countdown === 0) {
       setCountdown(null);
       beginSpeed100Game();
       return;
@@ -195,11 +195,11 @@ export function Speed100GameScreen() {
 
       {countdown !== null && <CountdownOverlay count={countdown} />}
 
-      {state.phase === "ready" && (
+      {state.phase === "ready" && countdown === null && (
         <GameOverlay variant="ready" mode="speed100" onRetry={handleStart} />
       )}
 
-      {state.phase === "clear" && (
+      {state.phase === "clear" && countdown === null && (
         <GameOverlay
           variant="clear"
           mode="speed100"
