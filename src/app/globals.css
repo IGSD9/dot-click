@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #020617;
+  --foreground: #f8fafc;
+  --accent: #6366f1;
 }
 
 @theme inline {
@@ -12,17 +13,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 .game-root {
@@ -32,4 +26,61 @@ body {
   overscroll-behavior: none;
   min-height: 100dvh;
   width: 100%;
+}
+
+.game-dot {
+  touch-action: manipulation;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: dot-pop 0.18s ease-out;
+}
+
+@keyframes dot-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.overlay-panel {
+  animation: overlay-in 0.25s ease-out;
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.hero-dot {
+  animation: hero-pulse 2s ease-in-out infinite;
+}
+
+@keyframes hero-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(129, 140, 248, 0.5);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 32px 8px rgba(129, 140, 248, 0.35);
+  }
+}
+
+.btn-primary {
+  @apply rounded-full bg-indigo-500 px-10 py-4 text-lg font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 hover:shadow-indigo-400/30 active:scale-[0.98];
+}
+
+.btn-secondary {
+  @apply rounded-full border border-slate-600 px-6 py-3 font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 active:scale-[0.98];
 }

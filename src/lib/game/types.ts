@@ -1,42 +1,31 @@
-import type { StageConfig } from "./stages";
+export type GamePhase = "ready" | "playing" | "gameover" | "clear";
 
-export type GamePhase = "idle" | "shooting" | "clear" | "gameover";
-
-export type Arrow = {
-  id: string;
-  angle: number;
-  isObstacle: boolean;
-};
-
-export type FlyingArrow = {
+export type DotPosition = {
   x: number;
   y: number;
 };
 
-export type GameLayout = {
-  width: number;
-  height: number;
-  centerX: number;
-  centerY: number;
-  targetRadius: number;
-  shootY: number;
+export type SurvivalState = {
+  phase: "ready" | "playing" | "gameover";
+  score: number;
+  misses: number;
+  dot: DotPosition | null;
+  timeLimitMs: number;
 };
 
-export type GameState = {
-  phase: GamePhase;
-  stage: number;
-  streak: number;
-  arrowsRemaining: number;
-  targetAngle: number;
-  rotationSpeed: number;
-  rotationDirection: 1 | -1;
-  frameCount: number;
-  stuckArrows: Arrow[];
-  flyingArrow: FlyingArrow | null;
-  config: StageConfig;
+export type Speed100State = {
+  phase: "ready" | "playing" | "clear";
+  taps: number;
+  targetTaps: number;
+  dot: DotPosition | null;
+  startedAt: number | null;
+  elapsedMs: number;
 };
 
 export type GameResult = {
-  stage: number;
-  streak: number;
+  clicks: number;
 };
+
+export function formatElapsedSeconds(ms: number): string {
+  return (ms / 1000).toFixed(2);
+}

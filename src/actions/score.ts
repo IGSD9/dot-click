@@ -6,24 +6,18 @@ import { prisma } from "@/lib/prisma";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 const SaveScoreSchema = z.object({
-  maxStage: z.number().int().min(1).max(9999),
-  streak: z.number().int().min(0).max(9999),
+  clicks: z.number().int().min(0).max(999999),
 });
 
 export type SaveScoreResult =
-  | { success: true; updated: boolean; totalScore: number; maxStage: number }
+  | { success: true; updated: boolean; totalScore: number }
   | { success: false; reason: "UNAUTHORIZED" | "NOT_CONFIGURED" | "DB_ERROR" };
 
 export type LeaderboardEntry = {
   rank: number;
   userName: string;
-  maxStage: number;
   totalScore: number;
 };
-
-function calcTotalScore(maxStage: number, streak: number) {
-  return maxStage * 1000 + Math.min(streak, 50) * 10;
-}
 
 async function getAuthUser() {
   if (!isSupabaseConfigured()) return null;
@@ -54,7 +48,6 @@ export async function saveScore(
   try {
     await upsertUserFromAuth(authUser);
 
-    const totalScore = calcTotalScore(parsed.maxStage, parsed.streak);
     const existing = await prisma.score.findUnique({
       where: { userId: authUser.id },
     });
@@ -63,43 +56,34 @@ export async function saveScore(
       const score = await prisma.score.create({
         data: {
           userId: authUser.id,
-          maxStage: parsed.maxStage,
-          totalScore,
+          maxStage: 0,
+          totalScore: parsed.clicks,
         },
       });
       return {
         success: true,
         updated: true,
         totalScore: score.totalScore,
-        maxStage: score.maxStage,
       };
     }
 
-    const newMaxStage = Math.max(existing.maxStage, parsed.maxStage);
-    const newTotalScore = Math.max(existing.totalScore, totalScore);
-
-    if (
-      newMaxStage === existing.maxStage &&
-      newTotalScore === existing.totalScore
-    ) {
+    if (parsed.clicks <= existing.totalScore) {
       return {
         success: true,
         updated: false,
         totalScore: existing.totalScore,
-        maxStage: existing.maxStage,
       };
     }
 
     const score = await prisma.score.update({
       where: { userId: authUser.id },
-      data: { maxStage: newMaxStage, totalScore: newTotalScore },
+      data: { totalScore: parsed.clicks },
     });
 
     return {
       success: true,
       updated: true,
       totalScore: score.totalScore,
-      maxStage: score.maxStage,
     };
   } catch {
     return { success: false, reason: "DB_ERROR" };
@@ -119,7 +103,6 @@ export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
     return scores.map((score, index) => ({
       rank: index + 1,
       userName: score.user.name,
-      maxStage: score.maxStage,
       totalScore: score.totalScore,
     }));
   } catch {

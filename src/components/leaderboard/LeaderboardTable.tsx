@@ -24,18 +24,19 @@ export function LeaderboardTable({
           <tr>
             <th className="px-4 py-3 font-medium">Rank</th>
             <th className="px-4 py-3 font-medium">Name</th>
-            <th className="px-4 py-3 font-medium">Stage</th>
-            <th className="px-4 py-3 font-medium text-right">Score</th>
+            <th className="px-4 py-3 font-medium text-right">Clicks</th>
           </tr>
         </thead>
         <tbody>
           {entries.map((entry) => (
-            <tr key={`${entry.rank}-${entry.userName}`} className="border-t border-slate-800">
+            <tr
+              key={`${entry.rank}-${entry.userName}`}
+              className="border-t border-slate-800"
+            >
               <td className="px-4 py-3 font-semibold text-indigo-400">
                 #{entry.rank}
               </td>
               <td className="px-4 py-3 text-white">{entry.userName}</td>
-              <td className="px-4 py-3 text-slate-300">{entry.maxStage}</td>
               <td className="px-4 py-3 text-right tabular-nums text-white">
                 {entry.totalScore.toLocaleString()}
               </td>
