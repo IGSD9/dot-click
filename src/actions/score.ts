@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { upsertUserFromAuth } from "@/actions/user";
-import { getDatabaseConfigErrorMessage } from "@/lib/database";
+import { getDatabaseConfigErrorMessage, getDatabaseConnectionHint } from "@/lib/database";
 import { prisma } from "@/lib/prisma";
 import {
   normalizePlayerName,
@@ -309,7 +309,12 @@ export async function saveGameScore(
     return saveGuestSpeed100Score(guestName, parsed.elapsedMs);
   } catch (error) {
     console.error("saveGameScore failed", error);
-    return { success: false, reason: "DB_ERROR" };
+    const message = error instanceof Error ? error.message : "unknown";
+    return {
+      success: false,
+      reason: "DB_ERROR",
+      message: getDatabaseConnectionHint(message) ?? message,
+    };
   }
 }
 
@@ -366,9 +371,10 @@ export async function getLeaderboard(
     };
   } catch (error) {
     console.error("getLeaderboard failed", error);
+    const message = error instanceof Error ? error.message : "unknown";
     return {
       entries: [],
-      dbError: error instanceof Error ? error.message : "unknown",
+      dbError: getDatabaseConnectionHint(message) ?? message,
     };
   }
 }

@@ -41,6 +41,17 @@ export function getDatabaseConfigErrorMessage(): string | null {
   return null;
 }
 
+export function getDatabaseConnectionHint(errorMessage: string): string | null {
+  if (
+    errorMessage.includes("Can't reach database server") &&
+    errorMessage.includes(":5432")
+  ) {
+    return "Vercel から Direct connection（5432）には接続できません。Supabase Dashboard → Database → Connection string → Transaction pooler の URI（ポート 6543）を DATABASE_URL に設定して Redeploy してください。";
+  }
+
+  return null;
+}
+
 export function maskDatabaseHost(databaseUrl: string | undefined): string | null {
   if (!databaseUrl) return null;
   try {

@@ -1,5 +1,6 @@
 import {
   getDatabaseConfigErrorMessage,
+  getDatabaseConnectionHint,
   maskDatabaseHost,
   readRawDatabaseUrl,
 } from "@/lib/database";
@@ -31,11 +32,12 @@ export async function GET() {
       guestCount,
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown";
     return Response.json({
       ok: false,
       step: "query",
       host,
-      message: error instanceof Error ? error.message : "unknown",
+      message: getDatabaseConnectionHint(message) ?? message,
     });
   }
 }
