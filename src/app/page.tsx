@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Target, Trophy, Zap } from "lucide-react";
+import { Clock, Trophy, Zap } from "lucide-react";
 import { GAME_MODES } from "@/lib/game/modes";
 import { SiteHeader } from "@/components/ui/SiteHeader";
 
@@ -70,25 +70,25 @@ export default function Home() {
               </div>
             </div>
           </Link>
-        </div>
 
-        <div className="relative flex w-full max-w-sm items-start justify-center gap-4 px-2 text-center text-xs text-slate-500">
-          <div className="flex flex-1 flex-col items-center gap-1.5">
-            <Target className="h-4 w-4 text-indigo-400/60" aria-hidden />
-            <span>点をクリック</span>
-          </div>
-          <div className="flex flex-1 flex-col items-center gap-1.5">
-            <Clock className="h-4 w-4 text-emerald-400/60" aria-hidden />
-            <span>2つのモード</span>
-          </div>
           <Link
             href="/leaderboard"
-            className="flex flex-1 flex-col items-center gap-1.5 px-2 py-1 text-slate-400 transition hover:text-amber-300 active:text-amber-300"
+            className="group rounded-3xl border border-slate-800 bg-slate-900/70 p-6 transition hover:border-amber-500/60 hover:bg-slate-900"
           >
-            <Trophy className="h-4 w-4 text-amber-400" aria-hidden />
-            <span className="underline decoration-amber-400/40 underline-offset-4">
-              ランキング
-            </span>
+            <div className="flex items-start gap-4">
+              <div className="rounded-2xl bg-amber-500/15 p-3">
+                <Trophy className="h-6 w-6 text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">ランキング</h2>
+                <p className="mt-2 text-sm leading-relaxed text-slate-400">
+                  サバイバルモードの最多クリック数 TOP 50
+                </p>
+                <p className="mt-3 text-xs text-amber-400 group-hover:underline">
+                  見る →
+                </p>
+              </div>
+            </div>
           </Link>
         </div>
 
