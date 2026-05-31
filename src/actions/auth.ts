@@ -43,6 +43,13 @@ export async function sendMagicLink(email: string): Promise<SendMagicLinkResult>
     });
 
     if (error) {
+      if (error.message === "fetch failed") {
+        return {
+          success: false,
+          message:
+            "Supabase に接続できません。Vercel の NEXT_PUBLIC_SUPABASE_URL と ANON_KEY を確認し、保存後に Redeploy してください。",
+        };
+      }
       return { success: false, message: error.message };
     }
 
