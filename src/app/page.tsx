@@ -72,27 +72,25 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="relative grid max-w-sm grid-cols-3 gap-3 text-center text-xs text-slate-500">
-          <div className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 px-3 py-4">
-            <Target className="h-5 w-5 text-indigo-400" />
+        <div className="relative flex w-full max-w-sm items-start justify-center gap-4 px-2 text-center text-xs text-slate-500">
+          <div className="flex flex-1 flex-col items-center gap-1.5">
+            <Target className="h-4 w-4 text-indigo-400/60" aria-hidden />
             <span>点をクリック</span>
           </div>
-          <div className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 px-3 py-4">
-            <Clock className="h-5 w-5 text-emerald-400" />
+          <div className="flex flex-1 flex-col items-center gap-1.5">
+            <Clock className="h-4 w-4 text-emerald-400/60" aria-hidden />
             <span>2つのモード</span>
           </div>
-          <div className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 px-3 py-4">
-            <Trophy className="h-5 w-5 text-amber-400" />
-            <span>ランキング</span>
-          </div>
+          <Link
+            href="/leaderboard"
+            className="flex flex-1 flex-col items-center gap-1.5 px-2 py-1 text-slate-400 transition hover:text-amber-300 active:text-amber-300"
+          >
+            <Trophy className="h-4 w-4 text-amber-400" aria-hidden />
+            <span className="underline decoration-amber-400/40 underline-offset-4">
+              ランキング
+            </span>
+          </Link>
         </div>
-
-        <Link
-          href="/leaderboard"
-          className="relative text-sm text-indigo-400 hover:underline"
-        >
-          ランキングを見る →
-        </Link>
 
         <p className="relative max-w-sm text-center text-xs text-slate-600">
           PC: マウス左クリック　｜　スマホ: 指でタップ
