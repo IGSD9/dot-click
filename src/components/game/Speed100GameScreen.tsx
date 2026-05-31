@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { saveScore } from "@/actions/score";
 import { GAME_CONFIG } from "@/lib/game/constants";
 import {
   createSpeed100InitialState,
@@ -10,12 +11,15 @@ import {
 } from "@/lib/game/engine-speed100";
 import type { PlayAreaBounds } from "@/lib/game/spawn";
 import type { Speed100State } from "@/lib/game/types";
+import { CountdownOverlay } from "./CountdownOverlay";
 import { GameOverlay } from "./GameOverlay";
+import type { SaveStatus } from "./GameOverlay";
 import { Speed100HUD } from "./Speed100HUD";
 
 export function Speed100GameScreen() {
   const areaRef = useRef<HTMLDivElement>(null);
   const hudRef = useRef<HTMLElement>(null);
+  const countdownTimerRef = useRef<number | null>(null);
   const playBoundsRef = useRef<PlayAreaBounds>({
     width: 360,
     height: 640,
@@ -25,6 +29,15 @@ export function Speed100GameScreen() {
 
   const [state, setState] = useState<Speed100State>(createSpeed100InitialState);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+
+  const clearCountdownTimer = useCallback(() => {
+    if (countdownTimerRef.current !== null) {
+      window.clearTimeout(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+  }, []);
 
   const measurePlayArea = useCallback(() => {
     const areaRect = areaRef.current?.getBoundingClientRect();
@@ -62,11 +75,17 @@ export function Speed100GameScreen() {
     };
   }, []);
 
-  const handleStart = useCallback(() => {
+  const beginSpeed100Game = useCallback(() => {
     measurePlayArea();
     setState(startSpeed100Game(playBoundsRef.current));
     setElapsedMs(0);
+    setSaveStatus("idle");
   }, [measurePlayArea]);
+
+  const handleStart = useCallback(() => {
+    clearCountdownTimer();
+    setCountdown(3);
+  }, [clearCountdownTimer]);
 
   const handleDotPointerDown = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -104,6 +123,48 @@ export function Speed100GameScreen() {
     return () => window.clearInterval(id);
   }, [state]);
 
+  useEffect(() => {
+    if (state.phase !== "clear") return;
+    setSaveStatus("saving");
+
+    void saveScore({ mode: "speed100", elapsedMs: state.elapsedMs }).then(
+      (response) => {
+        if (response.success) {
+          setSaveStatus("saved");
+          return;
+        }
+        if (response.reason === "UNAUTHORIZED") {
+          setSaveStatus("unauthorized");
+          return;
+        }
+        if (response.reason === "NOT_CONFIGURED") {
+          setSaveStatus("not_configured");
+          return;
+        }
+        setSaveStatus("error");
+      }
+    );
+  }, [state.elapsedMs, state.phase]);
+
+  useEffect(() => {
+    if (countdown === null) return;
+
+    if (countdown <= 1) {
+      setCountdown(null);
+      beginSpeed100Game();
+      return;
+    }
+
+    clearCountdownTimer();
+    countdownTimerRef.current = window.setTimeout(() => {
+      setCountdown((prev) => (prev === null ? null : prev - 1));
+    }, 1000);
+
+    return clearCountdownTimer;
+  }, [beginSpeed100Game, clearCountdownTimer, countdown]);
+
+  useEffect(() => () => clearCountdownTimer(), [clearCountdownTimer]);
+
   return (
     <div
       ref={areaRef}
@@ -132,6 +193,8 @@ export function Speed100GameScreen() {
         />
       )}
 
+      {countdown !== null && <CountdownOverlay count={countdown} />}
+
       {state.phase === "ready" && (
         <GameOverlay variant="ready" mode="speed100" onRetry={handleStart} />
       )}
@@ -141,6 +204,7 @@ export function Speed100GameScreen() {
           variant="clear"
           mode="speed100"
           elapsedMs={state.elapsedMs}
+          saveStatus={saveStatus}
           onRetry={handleStart}
         />
       )}

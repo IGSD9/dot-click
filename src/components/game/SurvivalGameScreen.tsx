@@ -12,6 +12,7 @@ import {
 } from "@/lib/game/engine-survival";
 import type { PlayAreaBounds } from "@/lib/game/spawn";
 import type { SurvivalState } from "@/lib/game/types";
+import { CountdownOverlay } from "./CountdownOverlay";
 import { GameHUD } from "./GameHUD";
 import { GameOverlay, type SaveStatus } from "./GameOverlay";
 
@@ -19,6 +20,7 @@ export function SurvivalGameScreen() {
   const areaRef = useRef<HTMLDivElement>(null);
   const hudRef = useRef<HTMLElement>(null);
   const timerRef = useRef<number | null>(null);
+  const countdownTimerRef = useRef<number | null>(null);
   const deadlineRef = useRef<number>(0);
   const playBoundsRef = useRef<PlayAreaBounds>({
     width: 360,
@@ -31,11 +33,19 @@ export function SurvivalGameScreen() {
     GAME_CONFIG.INITIAL_TIME_MS
   );
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
       window.clearTimeout(timerRef.current);
       timerRef.current = null;
+    }
+  }, []);
+
+  const clearCountdownTimer = useCallback(() => {
+    if (countdownTimerRef.current !== null) {
+      window.clearTimeout(countdownTimerRef.current);
+      countdownTimerRef.current = null;
     }
   }, []);
 
@@ -56,7 +66,7 @@ export function SurvivalGameScreen() {
 
   const onGameOver = useCallback(async (clicks: number) => {
     setSaveStatus("saving");
-    const response = await saveScore({ clicks });
+    const response = await saveScore({ mode: "survival", clicks });
 
     if (response.success) {
       setSaveStatus("saved");
@@ -97,12 +107,17 @@ export function SurvivalGameScreen() {
     [clearTimer, handleTimeout]
   );
 
-  const handleStart = useCallback(() => {
+  const beginSurvivalGame = useCallback(() => {
     measurePlayArea();
     clearTimer();
     setState(startSurvivalGame(playBoundsRef.current));
     setSaveStatus("idle");
   }, [clearTimer, measurePlayArea]);
+
+  const handleStart = useCallback(() => {
+    clearCountdownTimer();
+    setCountdown(3);
+  }, [clearCountdownTimer]);
 
   const handleDotPointerDown = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -162,6 +177,31 @@ export function SurvivalGameScreen() {
 
   useEffect(() => () => clearTimer(), [clearTimer]);
 
+  useEffect(() => {
+    if (countdown === null) return;
+
+    if (countdown <= 1) {
+      setCountdown(null);
+      beginSurvivalGame();
+      return;
+    }
+
+    clearCountdownTimer();
+    countdownTimerRef.current = window.setTimeout(() => {
+      setCountdown((prev) => (prev === null ? null : prev - 1));
+    }, 1000);
+
+    return clearCountdownTimer;
+  }, [beginSurvivalGame, clearCountdownTimer, countdown]);
+
+  useEffect(
+    () => () => {
+      clearCountdownTimer();
+      clearTimer();
+    },
+    [clearCountdownTimer, clearTimer]
+  );
+
   return (
     <div
       ref={areaRef}
@@ -191,6 +231,8 @@ export function SurvivalGameScreen() {
           }}
         />
       )}
+
+      {countdown !== null && <CountdownOverlay count={countdown} />}
 
       {state.phase === "ready" && (
         <GameOverlay

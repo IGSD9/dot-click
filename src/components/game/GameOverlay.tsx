@@ -78,12 +78,10 @@ export function GameOverlay({
         {!isReady && <p className="mt-2 text-slate-400">{subtitle}</p>}
 
         {!isReady &&
-          !isClear &&
           saveStatus === "saving" && (
             <p className="mt-3 text-sm text-slate-400">スコアを保存中...</p>
           )}
         {!isReady &&
-          !isClear &&
           saveStatus !== "saving" &&
           saveStatus !== "idle" && <SaveMessage status={saveStatus} />}
 
@@ -96,7 +94,7 @@ export function GameOverlay({
             {isReady ? "START" : "RETRY"}
           </button>
 
-          {!isReady && !isClear && saveStatus === "unauthorized" && (
+          {!isReady && saveStatus === "unauthorized" && (
             <Link
               href="/auth/login"
               className="rounded-full border border-indigo-500 py-3 font-semibold text-indigo-300 transition hover:bg-indigo-500/10"
