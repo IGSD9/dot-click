@@ -9,7 +9,8 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
+    "db:migrate": "DOTENV_CONFIG_PATH=.env.local node -r dotenv/config ./node_modules/.bin/prisma migrate dev",
+    "db:deploy": "DOTENV_CONFIG_PATH=.env.local node -r dotenv/config ./node_modules/.bin/prisma migrate deploy",
     "generate:icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
