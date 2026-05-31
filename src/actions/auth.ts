@@ -1,7 +1,14 @@
 "use server";
 
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { headers } from "next/headers";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/server";
+
+function readEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  if (!value) return undefined;
+  return value.replace(/^["']|["']$/g, "");
+}
 
 export type SendMagicLinkResult =
   | { success: true }
@@ -12,9 +19,12 @@ export async function sendMagicLink(email: string): Promise<SendMagicLinkResult>
     return {
       success: false,
       message:
-        "Supabase が未設定です。Vercel の Environment Variables を確認してください。",
+        "Supabase が未設定です。Vercel → Settings → Environment Variables を確認してください。",
     };
   }
+
+  const url = readEnv("NEXT_PUBLIC_SUPABASE_URL")!;
+  const key = readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")!;
 
   const headersList = await headers();
   const host = headersList.get("x-forwarded-host") ?? headersList.get("host");
@@ -25,7 +35,7 @@ export async function sendMagicLink(email: string): Promise<SendMagicLinkResult>
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = createSupabaseClient(url, key);
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -38,10 +48,11 @@ export async function sendMagicLink(email: string): Promise<SendMagicLinkResult>
     }
 
     return { success: true };
-  } catch {
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "unknown";
     return {
       success: false,
-      message: "ログインに失敗しました。しばらくしてから再度お試しください。",
+      message: `ログインに失敗しました: ${detail}`,
     };
   }
 }
