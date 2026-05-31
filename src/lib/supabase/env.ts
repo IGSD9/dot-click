@@ -24,6 +24,9 @@ export function normalizeSupabaseUrl(raw: string | undefined): string | undefine
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
       return undefined;
     }
+    if (!parsed.hostname.includes("supabase")) {
+      return undefined;
+    }
     return `${parsed.protocol}//${parsed.host}`;
   } catch {
     return undefined;
@@ -52,7 +55,10 @@ export function getSupabaseConfigErrorMessage(): string | null {
   }
 
   if (rawUrl && !url) {
-    return `NEXT_PUBLIC_SUPABASE_URL の形式が不正です（現在: ${rawUrl.slice(0, 40)}...）。https://ghisemscbexvededtzuy.supabase.co を引用符なしで設定してください。`;
+    if (/^next_public_/i.test(rawUrl) || rawUrl.includes("example")) {
+      return "NEXT_PUBLIC_SUPABASE_URL の Value に Key 名や EXAMPLE が入っています。https://ghisemscbexvededtzuy.supabase.co を設定してください。";
+    }
+    return `NEXT_PUBLIC_SUPABASE_URL の形式が不正です。https://ghisemscbexvededtzuy.supabase.co を引用符なしで設定してください。`;
   }
 
   if (!key) {
