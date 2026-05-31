@@ -43,6 +43,11 @@ export type LeaderboardEntry = {
   elapsedMs?: number;
 };
 
+export type LeaderboardResult = {
+  entries: LeaderboardEntry[];
+  dbError?: string;
+};
+
 export type PlayerIdentity =
   | { type: "authenticated"; name: string; email: string }
   | { type: "guest" };
@@ -270,7 +275,12 @@ export async function saveGameScore(
     return { success: false, reason: "NOT_CONFIGURED" };
   }
 
-  const parsed = SaveGameScoreSchema.parse(input);
+  let parsed: z.infer<typeof SaveGameScoreSchema>;
+  try {
+    parsed = SaveGameScoreSchema.parse(input);
+  } catch {
+    return { success: false, reason: "INVALID_NAME" };
+  }
 
   try {
     const authUser = await getAuthUser();
@@ -294,7 +304,8 @@ export async function saveGameScore(
       return saveGuestSurvivalScore(guestName, parsed.clicks);
     }
     return saveGuestSpeed100Score(guestName, parsed.elapsedMs);
-  } catch {
+  } catch (error) {
+    console.error("saveGameScore failed", error);
     return { success: false, reason: "DB_ERROR" };
   }
 }
@@ -309,8 +320,10 @@ export async function saveScore(
 export async function getLeaderboard(
   mode: LeaderboardMode,
   limit = 50
-): Promise<LeaderboardEntry[]> {
-  if (!process.env.DATABASE_URL) return [];
+): Promise<LeaderboardResult> {
+  if (!process.env.DATABASE_URL) {
+    return { entries: [], dbError: "DATABASE_URL is not configured" };
+  }
 
   try {
     const safeLimit = Math.min(Math.max(limit, 1), 100);
@@ -322,12 +335,14 @@ export async function getLeaderboard(
         include: { user: { select: { name: true } } },
       });
 
-      return scores.map((score, index) => ({
-        rank: index + 1,
-        mode: "survival",
-        userName: displayName(score),
-        totalScore: score.totalScore,
-      }));
+      return {
+        entries: scores.map((score, index) => ({
+          rank: index + 1,
+          mode: "survival",
+          userName: displayName(score),
+          totalScore: score.totalScore,
+        })),
+      };
     }
 
     const scores = await prisma.score.findMany({
@@ -337,14 +352,20 @@ export async function getLeaderboard(
       include: { user: { select: { name: true } } },
     });
 
-    return scores.map((score, index) => ({
-      rank: index + 1,
-      mode: "speed100",
-      userName: displayName(score),
-      elapsedMs: score.elapsedMs ?? undefined,
-    }));
-  } catch {
-    return [];
+    return {
+      entries: scores.map((score, index) => ({
+        rank: index + 1,
+        mode: "speed100",
+        userName: displayName(score),
+        elapsedMs: score.elapsedMs ?? undefined,
+      })),
+    };
+  } catch (error) {
+    console.error("getLeaderboard failed", error);
+    return {
+      entries: [],
+      dbError: error instanceof Error ? error.message : "unknown",
+    };
   }
 }
 

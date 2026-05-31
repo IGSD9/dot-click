@@ -3,25 +3,14 @@
 import Link from "next/link";
 import type { GameMode } from "@/lib/game/modes";
 import type { PlayerIdentity } from "@/actions/score";
-import { PLAYER_NAME_MAX } from "@/lib/player";
 
 type ReadyOverlayProps = {
   mode: GameMode;
   identity: PlayerIdentity | null;
-  guestName: string;
-  nameError?: string | null;
-  onGuestNameChange: (value: string) => void;
   onStart: () => void;
 };
 
-export function ReadyOverlay({
-  mode,
-  identity,
-  guestName,
-  nameError,
-  onGuestNameChange,
-  onStart,
-}: ReadyOverlayProps) {
+export function ReadyOverlay({ mode, identity, onStart }: ReadyOverlayProps) {
   const isSpeed100 = mode === "speed100";
   const isAuthenticated = identity?.type === "authenticated";
 
@@ -38,37 +27,15 @@ export function ReadyOverlay({
             : "制限時間内にクリック"}
         </p>
 
-        <div className="mt-6 text-left">
-          {isAuthenticated ? (
-            <div className="rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3">
-              <p className="text-xs text-slate-500">ログイン中</p>
-              <p className="mt-1 font-semibold text-white">{identity.name}</p>
-              <p className="mt-1 truncate text-xs text-slate-400">
-                {identity.email}
-              </p>
-            </div>
-          ) : (
-            <>
-              <label className="block text-sm text-slate-300">
-                プレイヤー名
-                <input
-                  type="text"
-                  value={guestName}
-                  maxLength={PLAYER_NAME_MAX}
-                  onChange={(event) => onGuestNameChange(event.target.value)}
-                  placeholder="例: たろう"
-                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-indigo-500"
-                />
-              </label>
-              {nameError && (
-                <p className="mt-2 text-sm text-rose-400">{nameError}</p>
-              )}
-              <p className="mt-2 text-xs text-slate-500">
-                ログインなしでもプレイできます。記録はランキングに反映されます。
-              </p>
-            </>
-          )}
-        </div>
+        {isAuthenticated && (
+          <div className="mt-6 rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-left">
+            <p className="text-xs text-slate-500">ログイン中</p>
+            <p className="mt-1 font-semibold text-white">{identity.name}</p>
+            <p className="mt-1 truncate text-xs text-slate-400">
+              {identity.email}
+            </p>
+          </div>
+        )}
 
         <div className="mt-8 flex flex-col gap-3">
           <button

@@ -4,6 +4,8 @@ import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
 import { SiteHeader } from "@/components/ui/SiteHeader";
 import { parseGameMode } from "@/lib/game/modes";
 
+export const dynamic = "force-dynamic";
+
 type LeaderboardPageProps = {
   searchParams: Promise<{ mode?: string }>;
 };
@@ -13,13 +15,14 @@ export default async function LeaderboardPage({
 }: LeaderboardPageProps) {
   const { mode: modeParam } = await searchParams;
   const mode = parseGameMode(modeParam);
-  const entries = await getLeaderboard(mode);
-  const emptyMessage =
-    process.env.DATABASE_URL
+  const { entries, dbError } = await getLeaderboard(mode);
+  const emptyMessage = dbError
+    ? `ランキングの取得に失敗しました: ${dbError}`
+    : process.env.DATABASE_URL
       ? mode === "survival"
         ? "まだサバイバルのスコアがありません。ゲームをプレイして記録を残しましょう。"
         : "まだ20点スピードの記録がありません。ゲームをプレイして記録を残しましょう。"
-      : "DATABASE_URL が未設定です。.env.local を設定して DB を接続してください。";
+      : "DATABASE_URL が未設定です。Vercel の Environment Variables を確認してください。";
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
