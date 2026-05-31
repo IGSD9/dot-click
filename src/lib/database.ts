@@ -19,6 +19,30 @@ export function getDatabaseUrl(): string | undefined {
   return raw;
 }
 
+/** Prisma 用 URL（Supabase pooler では prepared statement を無効化） */
+export function getPrismaDatabaseUrl(): string {
+  const raw = readRawDatabaseUrl();
+  if (!raw) {
+    throw new Error("DATABASE_URL is not set");
+  }
+
+  if (!raw.includes("pooler.supabase.com")) {
+    return raw;
+  }
+
+  const separator = raw.includes("?") ? "&" : "?";
+  let url = raw;
+
+  if (!/[?&]pgbouncer=true(?:&|$)/.test(url)) {
+    url += `${separator}pgbouncer=true`;
+  }
+  if (!/[?&]connection_limit=/.test(url)) {
+    url += `${url.includes("?") ? "&" : "?"}connection_limit=1`;
+  }
+
+  return url;
+}
+
 export function getDatabaseConfigErrorMessage(): string | null {
   const raw = readRawDatabaseUrl();
 
@@ -42,6 +66,13 @@ export function getDatabaseConfigErrorMessage(): string | null {
 }
 
 export function getDatabaseConnectionHint(errorMessage: string): string | null {
+  if (
+    errorMessage.includes("prepared statement") &&
+    errorMessage.includes("already exists")
+  ) {
+    return "DB 接続設定の問題です。Vercel の DATABASE_URL 末尾に ?pgbouncer=true を付けて Redeploy してください（アプリ側でも自動付与するよう修正済みの場合は Redeploy のみ）。";
+  }
+
   if (
     errorMessage.includes("Can't reach database server") &&
     errorMessage.includes(":5432")

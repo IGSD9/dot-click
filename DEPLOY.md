@@ -133,6 +133,8 @@ git push -u origin main
 postgresql://postgres.ghisemscbexvededtzuy:[PASSWORD]@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true
 ```
 
+> ⚠️ **`?pgbouncer=true` は必須。** 付けないとランキング表示が不安定になり、`prepared statement already exists` エラーが出ます。
+
 5. **Deploy** をクリック
 
 ### リージョン
@@ -177,6 +179,18 @@ postgresql://postgres.ghisemscbexvededtzuy:[PASSWORD]@aws-0-ap-northeast-1.poole
 ```
 
 > ローカルの `.env.local`（5432）と Vercel 本番（6543 pooler）は **別の URI** を使います。
+
+### トラブルシュート: prepared statement already exists
+
+**症状:** ランキング画面に `prepared statement "s0" already exists`（コード 42P05）
+
+**原因:** Transaction pooler 利用時に Prisma の prepared statement が PgBouncer と競合している。
+
+**対処:**
+
+1. Vercel の `DATABASE_URL` 末尾に **`?pgbouncer=true`** があるか確認（なければ追加）
+2. **Redeploy**
+3. 最新コードでは pooler 検出時に自動付与するが、Redeploy が必要
 
 ---
 
